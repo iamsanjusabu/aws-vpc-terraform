@@ -4,6 +4,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.43"
     }
+
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.8"
+    }
   }
 
   backend "local" {
