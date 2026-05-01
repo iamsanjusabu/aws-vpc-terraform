@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # RUN THIS WHILE INSIDE TMUX
+# MUST BE INSIDE THE "applications" FOLDER TO RUN
 
 set -e
 
+sudo apt update
 sudo apt install python3-venv -y
 
 python3 -m venv python_venv
-
 source python_venv/bin/activate
-
 pip install fastapi[standard]
 
 fastapi dev fastapi/main.py
