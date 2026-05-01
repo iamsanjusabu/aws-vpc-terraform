@@ -21,7 +21,7 @@ resource "aws_internet_gateway" "internet_gateway" {
 resource "aws_subnet" "public" {
   vpc_id = aws_vpc.main.id
 
-  for_each          = var.public_subnet
+  for_each          = var.public_subnets
   cidr_block        = each.value.cidr
   availability_zone = each.value.az
 
@@ -32,15 +32,15 @@ resource "aws_subnet" "public" {
 
 # aws vpc private subnet 
 resource "aws_subnet" "private" {
-    vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.main.id
 
-    for_each = var.private_subnet
-    cidr_block = each.value.cidr
-    availability_zone = each.value.az
+  for_each          = var.private_subnets
+  cidr_block        = each.value.cidr
+  availability_zone = each.value.az
 
-    tags = {
-        Name = each.key
-    }
+  tags = {
+    Name = each.key
+  }
 }
 
 # aws vpc route tables
@@ -66,7 +66,7 @@ resource "aws_route_table" "public" {
 
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-  
+
   for_each = var.nat_gateway
   # Connection inside the vpc for subnet resources
   route {
@@ -86,14 +86,14 @@ resource "aws_route_table" "private" {
 
 # aws vpc route table association 
 resource "aws_route_table_association" "public" {
-  for_each = var.public_subnet
-  subnet_id = aws_subnet.public[each.key].id
+  for_each       = var.public_subnets
+  subnet_id      = aws_subnet.public[each.key].id
   route_table_id = aws_route_table.public.id
 }
 
 resource "aws_route_table_association" "private" {
-  for_each = var.private_subnet
-  subnet_id = aws_subnet.private[each.key].id
+  for_each       = var.private_subnets
+  subnet_id      = aws_subnet.private[each.key].id
   route_table_id = aws_route_table.private[each.value.nat_gateway_key].id
 }
 
@@ -106,9 +106,9 @@ resource "aws_eip" "eip" {
 }
 
 resource "aws_nat_gateway" "nat_gateway" {
-  for_each = var.nat_gateway
+  for_each      = var.nat_gateway
   allocation_id = aws_eip.eip[each.key].id
-  subnet_id = aws_subnet.public[each.value.public_subnet_key].id
+  subnet_id     = aws_subnet.public[each.value.public_subnet_key].id
 
   tags = {
     Name = each.key
@@ -121,7 +121,7 @@ resource "aws_nat_gateway" "nat_gateway" {
 resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
 
-  name = "alb-sg"
+  name        = "alb-sg"
   description = "Allow inbound to port 80 and outbound to the private subnets port 8080"
   tags = {
     Name = "alb-sg"
@@ -131,21 +131,21 @@ resource "aws_security_group" "alb_sg" {
 # alb inbound 
 resource "aws_vpc_security_group_ingress_rule" "alb_sg_inbound_ipv4" {
   security_group_id = aws_security_group.alb_sg.id
-  
+
   ip_protocol = "tcp"
-  cidr_ipv4 = "0.0.0.0/0"
-  from_port = 80
-  to_port = 80
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 80
+  to_port     = 80
 }
 
 
 # alb outbound
 resource "aws_vpc_security_group_egress_rule" "alb_sg_outbound" {
   security_group_id = aws_security_group.alb_sg.id
-  
-  ip_protocol = "tcp"
-  to_port = 8080
-  from_port = 8080
+
+  ip_protocol                  = "tcp"
+  to_port                      = 8080
+  from_port                    = 8080
   referenced_security_group_id = aws_security_group.springboot_ec2_sg.id
 }
 
@@ -153,7 +153,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_sg_outbound" {
 resource "aws_security_group" "bastion_host_sg" {
   vpc_id = aws_vpc.main.id
 
-  name = "bastion-host-sg"
+  name        = "bastion-host-sg"
   description = "Allow ssh access to MY IP and allow bastion host to access port 22 of other ec2s in the vpc"
   tags = {
     Name = "bastion-host-sg"
@@ -163,16 +163,16 @@ resource "aws_security_group" "bastion_host_sg" {
 # bastion-host inbound
 resource "aws_vpc_security_group_ingress_rule" "bastion_host_sg_ssh_inbound" {
   security_group_id = aws_security_group.bastion_host_sg.id
-  ip_protocol = "tcp"
-  from_port = 22
-  to_port = 22
-  cidr_ipv4 = "103.148.20.7/32"  
+  ip_protocol       = "tcp"
+  from_port         = 22
+  to_port           = 22
+  cidr_ipv4         = "103.148.20.7/32"
 }
 
 # bastion-host outbound
 resource "aws_vpc_security_group_egress_rule" "bastion_host_sg_ipv4_outbound" {
   security_group_id = aws_security_group.bastion_host_sg.id
-  ip_protocol = "-1"
+  ip_protocol       = "-1"
 
   cidr_ipv4 = "0.0.0.0/0"
 }
@@ -182,8 +182,12 @@ resource "aws_vpc_security_group_egress_rule" "bastion_host_sg_ipv4_outbound" {
 resource "aws_security_group" "rds_sg" {
   vpc_id = aws_vpc.main.id
 
-  name = "rds-sg"
+  name        = "rds-sg"
   description = "Allow SSH and port 5432 access inbound and NAT gateway outbound"
+
+  tags = {
+    Name = "rds-sg"
+  }
 }
 
 #rds inbound
@@ -191,8 +195,8 @@ resource "aws_vpc_security_group_ingress_rule" "rds_sg_ssh_inbound" {
   security_group_id = aws_security_group.rds_sg.id
 
   ip_protocol = "tcp"
-  from_port = 22
-  to_port = 22
+  from_port   = 22
+  to_port     = 22
 
   referenced_security_group_id = aws_security_group.bastion_host_sg.id
 }
@@ -202,8 +206,8 @@ resource "aws_vpc_security_group_ingress_rule" "rds_sg_inbound" {
   security_group_id = aws_security_group.rds_sg.id
 
   ip_protocol = "tcp"
-  from_port = 5432
-  to_port = 5432
+  from_port   = 5432
+  to_port     = 5432
 
   referenced_security_group_id = aws_security_group.springboot_ec2_sg.id
 }
@@ -213,7 +217,7 @@ resource "aws_vpc_security_group_egress_rule" "rds_sg_ipv4_outbound" {
   security_group_id = aws_security_group.rds_sg.id
 
   ip_protocol = "-1"
-  cidr_ipv4 = "0.0.0.0/0"
+  cidr_ipv4   = "0.0.0.0/0"
 }
 
 
@@ -221,7 +225,7 @@ resource "aws_vpc_security_group_egress_rule" "rds_sg_ipv4_outbound" {
 resource "aws_security_group" "springboot_ec2_sg" {
   vpc_id = aws_vpc.main.id
 
-  name = "springboot-sg"
+  name        = "springboot-sg"
   description = "Allow inbound to 8080 and outbound to NAT gateway and also ssh access to bastion host"
   tags = {
     Name = "springboot-sg"
@@ -233,8 +237,8 @@ resource "aws_vpc_security_group_ingress_rule" "springboot_sg_inbound" {
   security_group_id = aws_security_group.springboot_ec2_sg.id
 
   ip_protocol = "tcp"
-  from_port = 8080
-  to_port = 8080
+  from_port   = 8080
+  to_port     = 8080
 
   referenced_security_group_id = aws_security_group.alb_sg.id
 }
@@ -244,8 +248,8 @@ resource "aws_vpc_security_group_ingress_rule" "springboot_sg_ssh_inbound" {
   security_group_id = aws_security_group.springboot_ec2_sg.id
 
   ip_protocol = "tcp"
-  from_port = 22
-  to_port = 22
+  from_port   = 22
+  to_port     = 22
 
   referenced_security_group_id = aws_security_group.bastion_host_sg.id
 }
@@ -255,7 +259,7 @@ resource "aws_vpc_security_group_egress_rule" "springboot_sg_ipv4_outbound" {
   security_group_id = aws_security_group.springboot_ec2_sg.id
 
   ip_protocol = "-1"
-  cidr_ipv4 = "0.0.0.0/0"
+  cidr_ipv4   = "0.0.0.0/0"
 }
 
 
@@ -263,17 +267,21 @@ resource "aws_vpc_security_group_egress_rule" "springboot_sg_ipv4_outbound" {
 resource "aws_security_group" "fastapi_ec2_sg" {
   vpc_id = aws_vpc.main.id
 
-  name = "fastapi-sg"
+  name        = "fastapi-sg"
   description = "SSH access to bastion host and port 8000 access to springboot"
+
+  tags = {
+    Name = "fastapi-sg"
+  }
 }
 
 # fastapi inbound
 resource "aws_vpc_security_group_ingress_rule" "fastapi_sg_ssh_inbound" {
   security_group_id = aws_security_group.fastapi_ec2_sg.id
 
-  ip_protocol = "tcp"
-  from_port = 22
-  to_port = 22
+  ip_protocol                  = "tcp"
+  from_port                    = 22
+  to_port                      = 22
   referenced_security_group_id = aws_security_group.bastion_host_sg.id
 }
 
@@ -281,9 +289,9 @@ resource "aws_vpc_security_group_ingress_rule" "fastapi_sg_ssh_inbound" {
 resource "aws_vpc_security_group_ingress_rule" "fastapi_sg_springboot_inbound" {
   security_group_id = aws_security_group.fastapi_ec2_sg.id
 
-  ip_protocol = "tcp"
-  from_port = 8000
-  to_port = 8000
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
   referenced_security_group_id = aws_security_group.springboot_ec2_sg.id
 }
 
@@ -292,5 +300,5 @@ resource "aws_vpc_security_group_egress_rule" "fastapi_sg_ipv4_outbound" {
   security_group_id = aws_security_group.fastapi_ec2_sg.id
 
   ip_protocol = "-1"
-  cidr_ipv4 = "0.0.0.0/0"
+  cidr_ipv4   = "0.0.0.0/0"
 }
