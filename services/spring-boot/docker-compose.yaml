@@ -1,0 +1,21 @@
+# ONLY LOCAL ENVIRONMENT
+# MUST CHANGE VARIABLES IN application.yaml
+
+services:
+  postgres:
+    container_name: postgresql
+    image: postgres:18
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB:
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./db:/docker-entrypoint-initdb.d/
+
+
+volumes:
+  pgdata:
+    name: pgdata

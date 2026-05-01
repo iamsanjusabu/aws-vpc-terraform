@@ -1,0 +1,20 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: simple-springboot-api-for-custom-vpc-test
+
+  datasource:
+    url: DATABASE-URL-HERE
+    username: DATABASE-MASTER-USERNAME
+    password: DATABASE-PASSWORD
+
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+
+
+fastapi:
+  url: http://localhost:8000/system/fastapi # FASTAPI ENDPOINT
